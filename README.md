@@ -104,7 +104,7 @@ func main() {
 ```
 
 ## Future Work
--- **Proof of Inclusion:** We are working on implementing optimized proof generation and verification for verifying that specific data is part of the MMR without requiring access to the entire structure.
+- **Proof of Inclusion:**: We are working on implementing optimized proof generation and verification for verifying that specific data is part of the MMR without requiring access to the entire structure.
 
 ## License
 
