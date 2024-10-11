@@ -1,5 +1,7 @@
 # Merkle Mountain Range (MMR) Implementation
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 ## Introduction
 
 The **Merkle Mountain Range (MMR)** is a cryptographic data structure designed for efficient, append-only data handling. It builds upon the concept of Merkle Trees by allowing the accumulation of data in multiple binary trees (mountains), ensuring that no data needs to be modified or recalculated as new data is added. This is especially useful for blockchain, timestamping, and verifiable log systems where append-only structures and proofs of inclusion are crucial.
