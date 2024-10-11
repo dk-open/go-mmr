@@ -1,6 +1,7 @@
 # Merkle Mountain Range (MMR) Implementation
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dk-open/go-mmr)](https://goreportcard.com/report/github.com/dk-open/go-mmr)
 
 ## Introduction
 
