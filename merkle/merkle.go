@@ -10,9 +10,9 @@ import (
 type IMountainRange[TIndex types.IndexValue, THash types.HashType] interface {
 	Add(ctx context.Context, value THash) error
 	Get(ctx context.Context, index TIndex) (THash, error)
+	//CreateProof(ctx context.Context, index TIndex) (*Proof, error)
 	Size() TIndex
 }
-
 type mmr[TIndex types.IndexValue, THash types.HashType] struct {
 	sync.RWMutex
 	root    IRoot[TIndex, THash]
@@ -44,6 +44,11 @@ func (m *mmr[TIndex, THash]) Add(ctx context.Context, value THash) error {
 	m.Unlock()
 	return err
 }
+
+//func (m *mmr[TIndex, THash]) CreateProof(ctx context.Context, index TIndex) (*Proof, error) {
+//
+//	return nil, nil
+//}
 
 func (m *mmr[TIndex, THash]) Size() TIndex {
 	return m.root.Size()

@@ -31,11 +31,9 @@ func (l *leafIndex[TI]) GetHeight() int {
 // It checks if the left child exists based on the node's height and position,
 // and returns the left child's index or nil if there is no left branch.
 func (l *leafIndex[TI]) LeftBranch() types.Index[TI] {
-	//fmt.Println("LeftBranch", isLeft(l.value), l.value, !types.IsNull(l.value))
 	if isLeft(l.value) && !types.IsNull(l.value) {
 		return NodeIndex[TI](types.SubtractUint64(l.value, 1))
 	}
-	//fmt.Println("return null")
 	return nil
 }
 

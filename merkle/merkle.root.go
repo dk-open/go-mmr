@@ -1,7 +1,6 @@
 package merkle
 
 import (
-	"github.com/dk-open/go-mmr/merkle/index"
 	"github.com/dk-open/go-mmr/types"
 )
 
@@ -19,13 +18,13 @@ type root[TI types.IndexValue, TH types.HashType] struct {
 }
 
 func (r *root[TI, TH]) Increment(peaks ...TH) error {
-	var hashes [][]byte
-	for _, peak := range peaks {
-		data, err := index.HashBytes[TH](peak)
+	hashes := make([][]byte, len(peaks))
+	for i, peak := range peaks {
+		data, err := types.HashBytes[TH](peak)
 		if err != nil {
 			return err
 		}
-		hashes = append(hashes, data)
+		hashes[i] = data
 	}
 	r.hash = r.hf(hashes...)
 	r.index = types.AddInt(r.index, 1)

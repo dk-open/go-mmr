@@ -52,7 +52,8 @@ func (n *nodeIndex[TI]) GetHeight() int {
 // It checks if the left child exists based on the node's height and position,
 // and returns the left child's index or nil if there is no left branch.
 func (n *nodeIndex[TI]) LeftBranch() types.Index[TI] {
-	pow := uint64(math.Pow(2, float64(n.GetHeight()+1)))
+	//pow := uint64(math.Pow(2, float64(n.GetHeight()+1)))
+	pow := uint64(1) << (n.GetHeight() + 1)
 	if types.IndexUint64(n.value) > pow {
 		return NodeIndex[TI](types.SubtractUint64(n.value, pow))
 	}
