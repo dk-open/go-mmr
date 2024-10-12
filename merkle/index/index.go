@@ -12,6 +12,7 @@ import (
 //     - if No Any left branches - return
 //     - go To 1
 func GetPeaks[TI types.IndexValue](x types.Index[TI]) (res []types.Index[TI]) {
+	res = make([]types.Index[TI], 0, 10)
 	var peak = x
 	for {
 		peak = peak.Top()
