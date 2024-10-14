@@ -2,6 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dk-open/go-mmr)](https://goreportcard.com/report/github.com/dk-open/go-mmr)
+[![codecov](https://codecov.io/gh/dk-open/go-mmr/graph/badge.svg?token=0UU4GMK24V)](https://codecov.io/gh/dk-open/go-mmr)
 
 ## Introduction
 

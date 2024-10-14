@@ -1,9 +1,28 @@
 package index
 
 import (
-	"github.com/dk-open/go-mmr/types"
-	"math/big"
+	"math/bits"
 )
+
+// IndexValue - Separate type for index values
+type IndexValue interface {
+	int | int16 | int32 | int64 | uint | uint16 | uint32 | uint64
+}
+
+// Index index navigator
+type Index[TI IndexValue] interface {
+	GetHeight() int
+	LeftBranch() Index[TI]
+	GetSibling() Index[TI]
+	RightUp() Index[TI]
+	Up() Index[TI]
+	IsRight() bool
+	Top() Index[TI]
+	Index() TI
+	Children() []Index[TI]
+	IsLeaf() bool
+	Key() string
+}
 
 // GetPeaks Calculates Peaks
 // Algorithm:
@@ -11,8 +30,8 @@ import (
 //  2. Go To the left branch.
 //     - if No Any left branches - return
 //     - go To 1
-func GetPeaks[TI types.IndexValue](x types.Index[TI]) (res []types.Index[TI]) {
-	res = make([]types.Index[TI], 0, 10)
+func GetPeaks[TI IndexValue](x Index[TI]) (res []Index[TI]) {
+	res = make([]Index[TI], 0, 10)
 	var peak = x
 	for {
 		peak = peak.Top()
@@ -23,59 +42,7 @@ func GetPeaks[TI types.IndexValue](x types.Index[TI]) (res []types.Index[TI]) {
 	}
 }
 
-func isLeft[IV types.IndexValue](value IV) bool {
-	return !isRight(value)
-}
-
-func isRight[IV types.IndexValue](value IV) bool {
-	switch v := any(value).(type) {
-	case int:
-		return firstBitSet(v)
-	case int32:
-		return firstBitSet(v)
-	case int64:
-		return firstBitSet(v)
-	case uint:
-		return firstBitSet(v)
-	case uint32:
-		return firstBitSet(v)
-	case uint64:
-		return firstBitSet(v)
-	case *big.Int:
-		return false
-	default:
-		panic("unsupported type")
-	}
-}
-
-func getHeight[IV types.IndexValue](value IV) (height int) {
-	switch v := any(value).(type) {
-	case int:
-		return getNumericHeight(v)
-	case int32:
-		return getNumericHeight(v)
-	case int64:
-		return getNumericHeight(v)
-	case uint:
-		return getNumericHeight(v)
-	case uint32:
-		return getNumericHeight(v)
-	case uint64:
-		return getNumericHeight(v)
-	case *big.Int:
-		heightBig := big.NewInt(0)
-		one := big.NewInt(1)
-		for v.Cmp(big.NewInt(0)) != 0 && v.Bit(0) == 0 {
-			v.Rsh(v, 1)
-			heightBig.Add(heightBig, one)
-		}
-		return int(heightBig.Int64())
-	default:
-		panic("unsupported type")
-	}
-}
-
-// getNumericHeight calculates the height of a node in a binary tree or MMR (Merkle Mountain Range).
+// getHeight calculates the height of a node in a binary tree or MMR (Merkle Mountain Range).
 // The height is determined by how many times the node's index can be divided by 2 (right-shifted) before it becomes odd.
 // Visualization:
 //
@@ -92,15 +59,9 @@ func getHeight[IV types.IndexValue](value IV) (height int) {
 //
 // Returns:
 // - The height of the node, as an integer, where 0 is a leaf, 1 is one level up, and so on.
-func getNumericHeight[T types.NumericValue](value T) (height int) {
-	var v1 = value
-	for v1 != 0 && v1&1 == 0 {
-		v1 = v1 >> 1
-		height++
+func getHeight[IV IndexValue](value IV) (height int) {
+	if value == 0 {
+		return 0
 	}
-	return height
-}
-
-func firstBitSet[T types.NumericValue](value T) bool {
-	return value&1 == 1
+	return bits.TrailingZeros(uint(value))
 }
