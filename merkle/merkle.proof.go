@@ -5,7 +5,7 @@ import (
 	"github.com/dk-open/go-mmr/types"
 )
 
-type Proof[TIndex index.IndexValue, THash types.HashType] struct {
+type Proof[TIndex index.Value, THash types.HashType] struct {
 	Target     TIndex
 	Hashes     []THash
 	LeftPeaks  []THash

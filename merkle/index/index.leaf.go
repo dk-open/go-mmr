@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-type leafIndex[TI IndexValue] struct {
+type leafIndex[TI Value] struct {
 	value TI
 	//keyF  KeyFunc[TK, TV]
 }
 
 // LeafIndex creates a new leaf index with the given value.
-func LeafIndex[TI IndexValue](value TI) Index[TI] {
+func LeafIndex[TI Value](value TI) Index[TI] {
 	res := &leafIndex[TI]{
 		value: value,
 	}

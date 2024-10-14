@@ -7,13 +7,13 @@ import (
 	"sync"
 )
 
-type memoryIndexSource[K index.IndexValue, V types.HashType] struct {
+type memoryIndexSource[K index.Value, V types.HashType] struct {
 	sync.RWMutex
 	leafs map[K]V
 	nodes map[K]V
 }
 
-func (a *memoryIndexSource[K, V]) SetHash(ctx context.Context, isLeaf bool, index K, value V) error {
+func (a *memoryIndexSource[K, V]) Set(ctx context.Context, isLeaf bool, index K, value V) error {
 	a.Lock()
 	if isLeaf {
 		a.leafs[index] = value
@@ -24,7 +24,7 @@ func (a *memoryIndexSource[K, V]) SetHash(ctx context.Context, isLeaf bool, inde
 	return nil
 }
 
-func (a *memoryIndexSource[K, V]) GetHash(ctx context.Context, isLeaf bool, index K) (V, error) {
+func (a *memoryIndexSource[K, V]) Get(ctx context.Context, isLeaf bool, index K) (V, error) {
 	var res V
 	var ok bool
 	a.RLock()
@@ -41,7 +41,7 @@ func (a *memoryIndexSource[K, V]) GetHash(ctx context.Context, isLeaf bool, inde
 	return res, nil
 }
 
-func MemoryIndexSource[K index.IndexValue, V types.HashType]() IIndexSource[K, V] {
+func MemoryIndexSource[K index.Value, V types.HashType]() IIndexSource[K, V] {
 	return &memoryIndexSource[K, V]{
 		leafs: make(map[K]V),
 		nodes: make(map[K]V),

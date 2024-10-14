@@ -4,13 +4,13 @@ import (
 	"math/bits"
 )
 
-// IndexValue - Separate type for index values
-type IndexValue interface {
+// Value - Separate type for index values
+type Value interface {
 	int | int16 | int32 | int64 | uint | uint16 | uint32 | uint64
 }
 
 // Index index navigator
-type Index[TI IndexValue] interface {
+type Index[TI Value] interface {
 	GetHeight() int
 	LeftBranch() Index[TI]
 	GetSibling() Index[TI]
@@ -30,7 +30,7 @@ type Index[TI IndexValue] interface {
 //  2. Go To the left branch.
 //     - if No Any left branches - return
 //     - go To 1
-func GetPeaks[TI IndexValue](x Index[TI]) (res []Index[TI]) {
+func GetPeaks[TI Value](x Index[TI]) (res []Index[TI]) {
 	res = make([]Index[TI], 0, 10)
 	var peak = x
 	for {
@@ -59,7 +59,7 @@ func GetPeaks[TI IndexValue](x Index[TI]) (res []Index[TI]) {
 //
 // Returns:
 // - The height of the node, as an integer, where 0 is a leaf, 1 is one level up, and so on.
-func getHeight[IV IndexValue](value IV) (height int) {
+func getHeight[IV Value](value IV) (height int) {
 	if value == 0 {
 		return 0
 	}

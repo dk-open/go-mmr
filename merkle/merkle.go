@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-type IMountainRange[TIndex index.IndexValue, THash types.HashType] interface {
+type IMountainRange[TIndex index.Value, THash types.HashType] interface {
 	Add(ctx context.Context, value THash) error
 	Get(ctx context.Context, index TIndex) (THash, error)
 	CreateProof(ctx context.Context, index TIndex) (*Proof[TIndex, THash], error)
@@ -17,28 +17,25 @@ type IMountainRange[TIndex index.IndexValue, THash types.HashType] interface {
 	Size() TIndex
 }
 
-type mmr[TIndex index.IndexValue, THash types.HashType] struct {
+type mmr[TIndex index.Value, THash types.HashType] struct {
 	sync.RWMutex
 	root    THash
 	size    TIndex
 	hf      types.Hasher[THash]
 	indexes store.IIndexSource[TIndex, THash]
-	hashes  store.IHashSource[THash]
 }
 
 // NewMountainRange creates a new Merkle Mountain Range.
-func NewMountainRange[TIndex index.IndexValue, THash types.HashType](hf types.Hasher[THash], indexes store.IIndexSource[TIndex, THash], hashes store.IHashSource[THash]) IMountainRange[TIndex, THash] {
+func NewMountainRange[TIndex index.Value, THash types.HashType](hf types.Hasher[THash], indexes store.IIndexSource[TIndex, THash]) IMountainRange[TIndex, THash] {
 	return &mmr[TIndex, THash]{
 		indexes: indexes,
 		hf:      hf,
-		//root:    newRoot[TIndex, THash](hf),
-		hashes: hashes,
 	}
 }
 
 func (m *mmr[TIndex, THash]) Get(ctx context.Context, index TIndex) (res THash, err error) {
 	m.RLock()
-	res, err = m.indexes.GetHash(ctx, true, index)
+	res, err = m.indexes.Get(ctx, true, index)
 	m.RUnlock()
 	return
 }
@@ -89,6 +86,7 @@ func (m *mmr[TIndex, THash]) CreateProof(ctx context.Context, i TIndex) (*Proof[
 	var leftPeaks []index.Index[TIndex]
 	var rightPeaks []index.Index[TIndex]
 	var proofIndexes []index.Index[TIndex]
+
 	for _, p := range peaks {
 		if p.IsLeaf() {
 			start = p.Index()
@@ -97,7 +95,12 @@ func (m *mmr[TIndex, THash]) CreateProof(ctx context.Context, i TIndex) (*Proof[
 		}
 
 		if start <= i && i < end {
-			proofIndexes = m.getProofIndexes(index.LeafIndex(i), end)
+			li := index.LeafIndex(i)
+			if m.size == 1 {
+				proofIndexes = []index.Index[TIndex]{li}
+			} else {
+				proofIndexes = m.getProofIndexes(li, end)
+			}
 			targetPeakFound = true
 		} else {
 			if targetPeakFound {
