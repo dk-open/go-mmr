@@ -42,7 +42,7 @@ func TestMmrProof(t *testing.T) {
 	memoryIndexes := store.MemoryIndexSource[uint64, types.Hash256]()
 	m := merkle.NewMountainRange[uint64, types.Hash256](hasher.Sha3_256, memoryIndexes)
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 7; i++ {
 		data := []byte(fmt.Sprintf("test data %d", i))
 
 		h := hasher.Sha3_256(data)
