@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type nodeIndex[TI IndexValue] struct {
+type nodeIndex[TI Value] struct {
 	value  TI
 	height int
 }
@@ -20,7 +20,7 @@ type nodeIndex[TI IndexValue] struct {
 // [1]     [3]            [5]    [7] (height 0)
 // / \      / \           / \    /  \
 // 0   1    2   3       4   5   6    7
-func NodeIndex[TI IndexValue](value TI) Index[TI] {
+func NodeIndex[TI Value](value TI) Index[TI] {
 	res := &nodeIndex[TI]{
 		value:  value,
 		height: getHeight(value),
@@ -130,6 +130,6 @@ func (n *nodeIndex[TI]) Key() string {
 	return fmt.Sprintf("node_%d", n.value)
 }
 
-func getDistance[TI IndexValue](height int) TI {
+func getDistance[TI Value](height int) TI {
 	return TI(1 << height)
 }

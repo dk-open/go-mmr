@@ -5,17 +5,17 @@ import (
 	"github.com/dk-open/go-mmr/types"
 )
 
-type IRoot[TI index.IndexValue, TH types.HashType] interface {
+type IRoot[TI index.Value, TH types.HashType] interface {
 	Hash() TH
 	ValidateProof(proof *Proof[TI, TH]) bool
 }
 
-type root[TI index.IndexValue, TH types.HashType] struct {
+type root[TI index.Value, TH types.HashType] struct {
 	hf   types.Hasher[TH]
 	hash TH
 }
 
-func newRoot[TI index.IndexValue, TH types.HashType](hash TH, hf types.Hasher[TH]) IRoot[TI, TH] {
+func newRoot[TI index.Value, TH types.HashType](hash TH, hf types.Hasher[TH]) IRoot[TI, TH] {
 	return &root[TI, TH]{hf: hf, hash: hash}
 }
 
@@ -27,23 +27,20 @@ func (r *root[TI, TH]) ValidateProof(proof *Proof[TI, TH]) bool {
 	if len(proof.Hashes) == 0 {
 		return false
 	}
-
 	hashesToProof := proof.RightPeaks
 
 	currentIndex := index.LeafIndex[TI](proof.Target)
 	currentHash := proof.Hashes[0]
 	for _, siblingHash := range proof.Hashes[1:] {
 		upper := currentIndex.Up()
-		currentNode := Node[TI, TH](upper.Index())
+		var currentNode INode[TH]
 		if currentIndex.IsRight() {
-			currentNode.SetLeft(siblingHash)
-			currentNode.SetRight(currentHash)
+			currentNode = Node[TH](siblingHash, currentHash)
 		} else {
-			currentNode.SetLeft(currentHash)
-			currentNode.SetRight(siblingHash)
+			currentNode = Node[TH](currentHash, siblingHash)
 		}
 
-		if err := buildNodeHash(r.hf, currentNode, func(nodeHash TH, packed []byte) error {
+		if err := buildNodeHash(r.hf, currentNode, func(nodeHash TH) error {
 			currentHash = nodeHash
 			return nil
 		}); err != nil {
