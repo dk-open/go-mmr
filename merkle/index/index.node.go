@@ -1,12 +1,12 @@
 package index
 
 import (
-	"github.com/dk-open/go-mmr/types"
-	"math"
+	"fmt"
 )
 
-type nodeIndex[TI types.IndexValue] struct {
-	value TI
+type nodeIndex[TI IndexValue] struct {
+	value  TI
+	height int
 }
 
 // NodeIndex creates a new node index with the given value.
@@ -20,9 +20,10 @@ type nodeIndex[TI types.IndexValue] struct {
 // [1]     [3]            [5]    [7] (height 0)
 // / \      / \           / \    /  \
 // 0   1    2   3       4   5   6    7
-func NodeIndex[TI types.IndexValue](value TI) types.Index[TI] {
+func NodeIndex[TI IndexValue](value TI) Index[TI] {
 	res := &nodeIndex[TI]{
-		value: value,
+		value:  value,
+		height: getHeight(value),
 	}
 	return res
 }
@@ -51,11 +52,10 @@ func (n *nodeIndex[TI]) GetHeight() int {
 // LeftBranch calculates the index of the left child (left branch) of the current node.
 // It checks if the left child exists based on the node's height and position,
 // and returns the left child's index or nil if there is no left branch.
-func (n *nodeIndex[TI]) LeftBranch() types.Index[TI] {
-	//pow := uint64(math.Pow(2, float64(n.GetHeight()+1)))
-	pow := uint64(1) << (n.GetHeight() + 1)
-	if types.IndexUint64(n.value) > pow {
-		return NodeIndex[TI](types.SubtractUint64(n.value, pow))
+func (n *nodeIndex[TI]) LeftBranch() Index[TI] {
+	distance := getDistance[TI](n.height + 1)
+	if n.value > distance {
+		return NodeIndex[TI](n.value - distance)
 	}
 	return nil
 }
@@ -63,19 +63,16 @@ func (n *nodeIndex[TI]) LeftBranch() types.Index[TI] {
 // GetSibling returns the index of the sibling node for the current leaf.
 // If the current leaf is on the right, it returns the previous (left) sibling by subtracting 1.
 // If the current leaf is on the left, it returns the next (right) sibling by adding 1.
-func (n *nodeIndex[TI]) GetSibling() types.Index[TI] {
-	shift := types.BitLeftShift[TI](n.GetHeight() + 1)
-	types.BitXor(n.value, shift)
-	return NodeIndex[TI](types.BitXor(n.value, shift))
+func (n *nodeIndex[TI]) GetSibling() Index[TI] {
+	distance := getDistance[TI](n.height + 1)
+	return NodeIndex[TI](n.value ^ distance)
 }
 
 // RightUp moves the current node to its parent if it's a right child in the tree hierarchy.
-func (n *nodeIndex[TI]) RightUp() types.Index[TI] {
-	shift := types.BitLeftShift[TI](n.GetHeight() + 1)
-
-	if types.BitAnd[TI](n.value, shift) == shift {
-		value := types.BitXor[TI](n.value, types.BitLeftShift[TI](n.GetHeight()))
-		if !types.IsNull(value) {
+func (n *nodeIndex[TI]) RightUp() Index[TI] {
+	distance := getDistance[TI](n.height + 1)
+	if n.value&distance == distance {
+		if value := n.value ^ (1 << n.height); value > 0 {
 			return NodeIndex[TI](value)
 		}
 	}
@@ -83,7 +80,7 @@ func (n *nodeIndex[TI]) RightUp() types.Index[TI] {
 }
 
 // Up returns the index of the parent node of the current node in the tree.
-func (n *nodeIndex[TI]) Up() types.Index[TI] {
+func (n *nodeIndex[TI]) Up() Index[TI] {
 	node := NodeIndex[TI](n.Index())
 	if !n.IsRight() {
 		node = node.GetSibling()
@@ -93,21 +90,21 @@ func (n *nodeIndex[TI]) Up() types.Index[TI] {
 
 // IsRight checks if the current node is a right child in the tree hierarchy.
 func (n *nodeIndex[TI]) IsRight() bool {
-	shift := types.BitLeftShift[TI](n.GetHeight() + 1)
-	return types.BitAnd[TI](n.value, shift) == shift
+	distance := getDistance[TI](n.height + 1)
+	return n.value&distance == distance
 }
 
 // Top returns the index of the "top" ancestor of the current node, climbing the tree structure.
-func (n *nodeIndex[TI]) Top() types.Index[TI] {
-	shift := types.BitLeftShift[TI](n.GetHeight())
+func (n *nodeIndex[TI]) Top() Index[TI] {
+	shift := TI(1 << n.height)
 	value := n.value
-	result := value
-	for !types.IsNull(result) && types.Equal(types.BitAnd(value, shift), shift) {
-		result = value
-		value = types.BitXor(value, shift)
-		shift = types.BitLeft[TI](shift)
+	top := value
+	for top != 0 && value&shift == shift {
+		top = value
+		value ^= shift
+		shift <<= 1
 	}
-	return NodeIndex[TI](result)
+	return NodeIndex[TI](top)
 }
 
 // Index returns the index value of the current node.
@@ -116,18 +113,23 @@ func (n *nodeIndex[TI]) Index() TI {
 }
 
 // Children returns the indexes of the children nodes of the current node.
-func (n *nodeIndex[TI]) Children() []types.Index[TI] {
-
-	h := n.GetHeight()
-	pow := uint64(math.Pow(2, float64(h))) / 2
-	index := n.value
-	if h == 0 {
-		return []types.Index[TI]{LeafIndex(types.SubtractUint64(index, 1)), LeafIndex(index)}
+func (n *nodeIndex[TI]) Children() []Index[TI] {
+	if n.height == 0 {
+		return []Index[TI]{LeafIndex(n.value - 1), LeafIndex(n.value)}
 	}
-	return []types.Index[TI]{NodeIndex(types.SubtractUint64(index, pow)), NodeIndex(types.SubtractUint64(index, -pow))}
+	childDistance := getDistance[TI](n.height - 1)
+	return []Index[TI]{NodeIndex(n.value - childDistance), NodeIndex(n.value + childDistance)}
 }
 
 // IsLeaf checks if the current node is a leaf node.
 func (n *nodeIndex[TI]) IsLeaf() bool {
 	return false
+}
+
+func (n *nodeIndex[TI]) Key() string {
+	return fmt.Sprintf("node_%d", n.value)
+}
+
+func getDistance[TI IndexValue](height int) TI {
+	return TI(1 << height)
 }

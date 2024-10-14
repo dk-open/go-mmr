@@ -18,7 +18,7 @@ func (m *mmr[TIndex, THash]) saveLeaf(ctx context.Context, index TIndex, value T
 	return m.hashes.Set(ctx, value, data)
 }
 
-func (m *mmr[TIndex, THash]) updateNode(ctx context.Context, i types.Index[TIndex], value THash) error {
+func (m *mmr[TIndex, THash]) updateNode(ctx context.Context, i index.Index[TIndex], value THash) error {
 	upper := i.RightUp()
 
 	if upper == nil {
@@ -40,24 +40,31 @@ func (m *mmr[TIndex, THash]) updateNode(ctx context.Context, i types.Index[TInde
 		}
 	}
 
+	return buildNodeHash(m.hf, upperNode, func(nodeHash THash, packed []byte) error {
+		if err := m.hashes.Set(ctx, nodeHash, packed); err != nil {
+			return err
+		}
+
+		if err := m.indexes.SetHash(ctx, false, upper.Index(), nodeHash); err != nil {
+			return err
+		}
+
+		return m.updateNode(ctx, upper, nodeHash)
+	})
+
+}
+
+func buildNodeHash[TIndex index.IndexValue, THash types.HashType](hf types.Hasher[THash], upperNode INode[TIndex, THash], f func(THash, []byte) error) error {
 	packed, err := upperNode.MarshalBinary()
 	if err != nil {
 		return err
 	}
-	nodeHash := m.hf(packed)
-	if err = m.hashes.Set(ctx, nodeHash, packed); err != nil {
-		return err
-	}
-
-	if err = m.indexes.SetHash(ctx, false, upper.Index(), nodeHash); err != nil {
-		return err
-	}
-
-	return m.updateNode(ctx, upper, nodeHash)
+	nodeHash := hf(packed)
+	return f(nodeHash, packed)
 }
 
 func (m *mmr[TIndex, THash]) appendMerkle(ctx context.Context, value THash) (err error) {
-	nextIndex := m.root.Size()
+	nextIndex := m.size
 	if err = m.saveLeaf(ctx, nextIndex, value); err != nil {
 		return err
 	}
@@ -68,13 +75,45 @@ func (m *mmr[TIndex, THash]) appendMerkle(ctx context.Context, value THash) (err
 	}
 
 	peaks := index.GetPeaks(leafIndex)
-	hashes := make([]THash, len(peaks))
+	hashes := make([][]byte, len(peaks))
 	for i, p := range peaks {
 		h, hErr := m.indexes.GetHash(ctx, p.IsLeaf(), p.Index())
 		if hErr != nil {
 			return hErr
 		}
-		hashes[i] = h
+		data, hErr := types.HashBytes[THash](h)
+		if hErr != nil {
+			return hErr
+		}
+		hashes[i] = data
 	}
-	return m.root.Increment(hashes...)
+	m.root = m.hf(hashes...)
+	m.size = m.size + 1
+	return nil
+}
+
+func (m *mmr[TIndex, THash]) indexToHash(ctx context.Context, indexes []index.Index[TIndex]) ([]THash, error) {
+	res := make([]THash, len(indexes))
+	i := 0
+	for _, nodeIndex := range indexes {
+		if h, err := m.indexes.GetHash(ctx, nodeIndex.IsLeaf(), nodeIndex.Index()); err != nil {
+			return nil, err
+		} else {
+			res[i] = h
+		}
+		i++
+	}
+	return res, nil
+}
+
+func (m *mmr[TIndex, THash]) GetHashNode(ctx context.Context, hash THash, f func(context.Context, INode[TIndex, THash]) error) error {
+	data, err := m.hashes.Get(ctx, hash)
+	if err != nil {
+		return err
+	}
+	n, err := NodeFromBinary[TIndex, THash](data)
+	if err != nil {
+		return err
+	}
+	return f(ctx, n)
 }

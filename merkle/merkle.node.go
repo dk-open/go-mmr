@@ -5,12 +5,13 @@ import (
 	"encoding"
 	"encoding/binary"
 	"fmt"
+	"github.com/dk-open/go-mmr/merkle/index"
 	"github.com/dk-open/go-mmr/types"
 	"io"
 	"math/big"
 )
 
-type INode[TIndex types.IndexValue, THash types.HashType] interface {
+type INode[TIndex index.IndexValue, THash types.HashType] interface {
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
 	IsLeaf() bool
@@ -23,7 +24,7 @@ type INode[TIndex types.IndexValue, THash types.HashType] interface {
 }
 
 // Node is a node in the Merkle Mountain Range.
-type node[TIndex types.IndexValue, THash types.HashType] struct {
+type node[TIndex index.IndexValue, THash types.HashType] struct {
 	leaf     bool
 	index    TIndex
 	children []THash
@@ -41,14 +42,14 @@ func (n *node[TIndex, THash]) Children() []THash {
 	return n.children
 }
 
-func LeafNode[TIndex types.IndexValue, THash types.HashType](index TIndex) INode[TIndex, THash] {
+func LeafNode[TIndex index.IndexValue, THash types.HashType](index TIndex) INode[TIndex, THash] {
 	return &node[TIndex, THash]{
 		leaf:  true,
 		index: index,
 	}
 }
 
-func NodeFromBinary[TIndex types.IndexValue, THash types.HashType](data []byte) (INode[TIndex, THash], error) {
+func NodeFromBinary[TIndex index.IndexValue, THash types.HashType](data []byte) (INode[TIndex, THash], error) {
 	n := &node[TIndex, THash]{}
 	if err := n.UnmarshalBinary(data); err != nil {
 		return nil, err
@@ -57,7 +58,7 @@ func NodeFromBinary[TIndex types.IndexValue, THash types.HashType](data []byte) 
 	return n, nil
 }
 
-func Node[TIndex types.IndexValue, THash types.HashType](index TIndex, children ...THash) INode[TIndex, THash] {
+func Node[TIndex index.IndexValue, THash types.HashType](index TIndex, children ...THash) INode[TIndex, THash] {
 	return &node[TIndex, THash]{
 		leaf:     true,
 		index:    index,
@@ -179,7 +180,7 @@ func zigzagDecode(n uint64) int64 {
 }
 
 // Helper: Encode numeric index values as a variant type
-func encodeVariantIndex[TIndex types.IndexValue](buf *bytes.Buffer, index TIndex) error {
+func encodeVariantIndex[TIndex index.IndexValue](buf *bytes.Buffer, index TIndex) error {
 	switch v := any(index).(type) {
 	case int:
 		return writeUVarint(buf, uint64(v))
@@ -204,7 +205,7 @@ func encodeVariantIndex[TIndex types.IndexValue](buf *bytes.Buffer, index TIndex
 }
 
 // Helper: Decode numeric index values as a variant type
-func decodeVariant[TIndex types.IndexValue](r io.Reader) (TIndex, error) {
+func decodeVariant[TIndex index.IndexValue](r io.Reader) (TIndex, error) {
 	switch any(*new(TIndex)).(type) {
 	case int:
 		v, err := readUVarint(r)

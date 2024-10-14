@@ -2,15 +2,15 @@ package index
 
 import (
 	"github.com/stretchr/testify/assert"
-	"math/big"
 	"testing"
 )
 
 func TestHeightMultiType(t *testing.T) {
+	assert.Equal(t, 2, getHeight[uint](4))
 	assert.Equal(t, 2, getHeight[uint32](4))
 	assert.Equal(t, 4, getHeight[int32](16))
 	assert.Equal(t, 5, getHeight[uint64](32))
-	assert.Equal(t, 1, getHeight[*big.Int](big.NewInt(78)))
+	assert.Equal(t, 1, getHeight[uint16](78))
 }
 
 func TestLeaf(t *testing.T) {
