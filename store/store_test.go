@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockHash types.Hash256
-
 func TestMemoryIndexSource_SetAndGet(t *testing.T) {
 	ctx := context.Background()
 
@@ -38,6 +36,10 @@ func TestMemoryIndexSource_SetAndGet(t *testing.T) {
 	res, err = source.Get(ctx, false, index2)
 	assert.NoError(t, err, "Get node value should not return an error")
 	assert.Equal(t, value2, res, "Get should return the correct node value")
+
+	leafIndex, err := source.LeafIndex(ctx, value1)
+	assert.NoError(t, err, "LeafIndex should not return an error")
+	assert.Equal(t, index1, leafIndex, "LeafIndex should return the correct index")
 }
 
 func TestMemoryIndexSource_KeyNotFound(t *testing.T) {

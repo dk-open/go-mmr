@@ -9,11 +9,7 @@ import (
 	"github.com/dk-open/go-mmr/types"
 	"github.com/dk-open/go-mmr/types/hasher"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"runtime"
-	"runtime/pprof"
 	"testing"
-	"time"
 )
 
 func TestMmrWithDifferentHashers(t *testing.T) {
@@ -42,6 +38,33 @@ func TestMmrProof(t *testing.T) {
 	memoryIndexes := store.MemoryIndexSource[uint64, types.Hash256]()
 	m := merkle.NewMountainRange[uint64, types.Hash256](hasher.Sha3_256, memoryIndexes)
 
+	var hashes []types.Hash256
+	for i := 0; i < 7; i++ {
+		data := []byte(fmt.Sprintf("test data %d", i))
+		h := hasher.Sha3_256(data)
+		hashes = append(hashes, h)
+	}
+
+	fmt.Println("Adding", len(hashes))
+	if err := m.Add(ctx, hashes...); err != nil {
+		t.Fatalf("failed to add hashes %d: %v", len(hashes), err)
+	}
+
+	p, err := m.Proof(ctx, hashes[3])
+	if err != nil {
+		t.Fatalf("failed to create proof: %v", err)
+	}
+
+	root, err := m.Root(ctx)
+	assert.NoError(t, err, "failed to get the root of the MMR")
+	assert.True(t, root.ValidateProof(p))
+}
+
+func TestMmrProofByIndex(t *testing.T) {
+	ctx := context.Background()
+	memoryIndexes := store.MemoryIndexSource[uint64, types.Hash256]()
+	m := merkle.NewMountainRange[uint64, types.Hash256](hasher.Sha3_256, memoryIndexes)
+
 	for i := 0; i < 7; i++ {
 		data := []byte(fmt.Sprintf("test data %d", i))
 
@@ -51,12 +74,13 @@ func TestMmrProof(t *testing.T) {
 			t.Fatalf("failed to add hash %v at index %d: %v", h, i, err)
 		}
 	}
-	p, err := m.CreateProof(ctx, 3)
+	p, err := m.ProofByIndex(ctx, 3)
 	if err != nil {
 		t.Fatalf("failed to create proof: %v", err)
 	}
 
-	root := m.Root()
+	root, err := m.Root(ctx)
+	assert.NoError(t, err, "failed to get the root of the MMR")
 	assert.True(t, root.ValidateProof(p))
 }
 
@@ -110,13 +134,16 @@ func TestCreateAndValidateProof_DifferentMMRSizes(t *testing.T) {
 			// Test Proof Creation for index 0 and last index in MMR (to test edge cases)
 			var i int
 			for i < tc.mmrSize-1 {
-				proof, err := mmr.CreateProof(ctx, uint64(i))
+				proof, err := mmr.ProofByIndex(ctx, uint64(i))
 				assert.NoError(t, err, "proof creation should not return an error")
 				assert.NotNil(t, proof, "proof should not be nil")
 				assert.Greater(t, len(proof.Hashes), 0, "proof should contain hashes")
 
 				// Validate the proof using the root from the MMR
-				root := mmr.Root()
+				root, err := mmr.Root(ctx)
+				if !assert.NoError(t, err, "failed to get the root of the MMR") {
+					t.Fatal(err)
+				}
 				isValid := root.ValidateProof(proof)
 				assert.True(t, isValid, "the proof should be valid")
 				i++
@@ -164,96 +191,4 @@ func testMmrWithHasher[TIndex index.Value, THash types.HashType](t *testing.T, c
 		_, err := m.Get(ctx, ni) // Request an index out of range
 		assert.Error(t, err, "expected an error when retrieving non-existent leaf")
 	})
-}
-
-func BenchmarkMmrWithDifferentHashers(b *testing.B) {
-	// Create a context for the benchmark
-	ctx := context.Background()
-	numElements := 100 // Benchmark for 100k elements
-
-	// Benchmark with hasher.Ripemd160
-	b.Run("Benchmark with Ripemd160", func(b *testing.B) {
-		benchmarkMmrWithHasher[uint64, types.Hash160](b, ctx, hasher.Ripemd160, numElements)
-		b.ReportAllocs()
-	})
-
-	// Benchmark with hasher.Blake3 using types.Hash256
-	b.Run("Benchmark with Blake3", func(b *testing.B) {
-		benchmarkMmrWithHasher[uint64, types.Hash256](b, ctx, hasher.Blake3, numElements)
-		b.ReportAllocs()
-	})
-
-	b.Run("Benchmark with Blake2b 256", func(b *testing.B) {
-		benchmarkMmrWithHasher[uint64, types.Hash256](b, ctx, hasher.Blake2b_256, numElements)
-		b.ReportAllocs()
-	})
-
-	b.Run("Benchmark with Blake2b 512", func(b *testing.B) {
-		benchmarkMmrWithHasher[uint32, types.Hash512](b, ctx, hasher.Blake2b_512, numElements)
-		b.ReportAllocs()
-	})
-}
-
-func BenchmarkMmrWithDifferentHashersWithProfiler(b *testing.B) {
-	// Create a context for the benchmark
-	ctx := context.Background()
-	numElements := 10000 // Benchmark for 10k elements
-
-	// CPU profiling
-	cpuProfile, err := os.Create("cpu.prof")
-	if err != nil {
-		b.Fatal("could not create CPU profile: ", err)
-	}
-	defer cpuProfile.Close()
-
-	if err = pprof.StartCPUProfile(cpuProfile); err != nil {
-		b.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
-
-	// Benchmark with hasher.Ripemd160
-	b.Run("Benchmark with Ripemd160", func(b *testing.B) {
-		benchmarkMmrWithHasher[uint64, types.Hash160](b, ctx, hasher.Ripemd160, numElements)
-	})
-	time.Sleep(2 * time.Second)
-
-	// Memory profiling
-	memProfile, err := os.Create("mem.prof")
-	if err != nil {
-		b.Fatal("could not create memory profile: ", err)
-	}
-	defer memProfile.Close()
-	runtime.GC()
-	runtime.MemProfileRate = 1
-	if err := pprof.WriteHeapProfile(memProfile); err != nil {
-		b.Fatal("could not write memory profile: ", err)
-	}
-}
-
-func benchmarkMmrWithHasher[TIndex index.Value, THash types.HashType](b *testing.B, ctx context.Context, hf func(...[]byte) THash, numElements int) {
-	// Initialize memory-based index and hash sources
-	memoryIndexes := store.MemoryIndexSource[TIndex, THash]()
-
-	// Create a new Merkle Mountain Range using the provided hash function
-	m := merkle.NewMountainRange[TIndex, THash](hf, memoryIndexes)
-
-	var ni TIndex
-
-	// Run the benchmark
-	for n := 0; n < b.N; n++ {
-		// Add 100k elements to the MMR
-		for i := 0; i < numElements; i++ {
-			data := []byte(fmt.Sprintf("test data %d", ni))
-			h := hf(data)
-
-			// Add the hash to the MMR
-			if err := m.Add(ctx, h); err != nil {
-				b.Fatalf("failed to add hash %v at index %d: %v", h, ni, err)
-			}
-
-			// Increment index for each element
-			ni += 1
-		}
-	}
-	b.ReportAllocs()
 }

@@ -98,5 +98,4 @@ func TestPeaks(t *testing.T) {
 	assert.Equal(t, 13, peaks14[1].Index())
 	assert.Equal(t, 10, peaks14[2].Index())
 	assert.Equal(t, 4, peaks14[3].Index())
-
 }

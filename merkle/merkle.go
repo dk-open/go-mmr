@@ -10,16 +10,17 @@ import (
 )
 
 type IMountainRange[TIndex index.Value, THash types.HashType] interface {
-	Add(ctx context.Context, value THash) error
+	Add(ctx context.Context, values ...THash) error
 	Get(ctx context.Context, index TIndex) (THash, error)
-	CreateProof(ctx context.Context, index TIndex) (*Proof[TIndex, THash], error)
-	Root() IRoot[TIndex, THash]
+	ProofByIndex(ctx context.Context, index TIndex) (*Proof[TIndex, THash], error)
+	Proof(ctx context.Context, item THash) (*Proof[TIndex, THash], error)
+	Root(ctx context.Context) (IRoot[TIndex, THash], error)
 	Size() TIndex
 }
 
 type mmr[TIndex index.Value, THash types.HashType] struct {
 	sync.RWMutex
-	root    THash
+	//root    THash
 	size    TIndex
 	hf      types.Hasher[THash]
 	indexes store.IIndexSource[TIndex, THash]
@@ -40,11 +41,15 @@ func (m *mmr[TIndex, THash]) Get(ctx context.Context, index TIndex) (res THash, 
 	return
 }
 
-func (m *mmr[TIndex, THash]) Add(ctx context.Context, value THash) error {
+func (m *mmr[TIndex, THash]) Add(ctx context.Context, value ...THash) error {
 	m.Lock()
-	err := m.appendMerkle(ctx, value)
-	m.Unlock()
-	return err
+	defer m.Unlock()
+	for _, v := range value {
+		if err := m.appendMerkle(ctx, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // getProofIndexes collects the indexes needed to create a proof for the given item.
@@ -65,7 +70,15 @@ func (m *mmr[TIndex, THash]) getProofIndexes(item index.Index[TIndex], maxIndex 
 	return res
 }
 
-func (m *mmr[TIndex, THash]) CreateProof(ctx context.Context, i TIndex) (*Proof[TIndex, THash], error) {
+func (m *mmr[TIndex, THash]) Proof(ctx context.Context, item THash) (*Proof[TIndex, THash], error) {
+	leafIndex, err := m.indexes.LeafIndex(ctx, item)
+	if err != nil {
+		return nil, err
+	}
+	return m.ProofByIndex(ctx, leafIndex)
+}
+
+func (m *mmr[TIndex, THash]) ProofByIndex(ctx context.Context, i TIndex) (*Proof[TIndex, THash], error) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -132,6 +145,24 @@ func (m *mmr[TIndex, THash]) Size() TIndex {
 	return m.size
 }
 
-func (m *mmr[TIndex, THash]) Root() IRoot[TIndex, THash] {
-	return newRoot[TIndex, THash](m.root, m.hf)
+func (m *mmr[TIndex, THash]) Root(ctx context.Context) (IRoot[TIndex, THash], error) {
+
+	m.RLock()
+	defer m.RUnlock()
+	peaks := index.GetPeaks(index.LeafIndex(m.size - 1))
+	hashes := make([][]byte, len(peaks))
+	for i, p := range peaks {
+		h, hErr := m.indexes.Get(ctx, p.IsLeaf(), p.Index())
+		if hErr != nil {
+			return nil, hErr
+		}
+		data, hErr := types.HashBytes[THash](h)
+		if hErr != nil {
+			return nil, hErr
+		}
+		hashes[i] = data
+	}
+	r := m.hf(hashes...)
+
+	return newRoot[TIndex, THash](r, m.hf), nil
 }
