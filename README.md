@@ -3,6 +3,9 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dk-open/go-mmr)](https://goreportcard.com/report/github.com/dk-open/go-mmr)
 [![codecov](https://codecov.io/gh/dk-open/go-mmr/graph/badge.svg?token=0UU4GMK24V)](https://codecov.io/gh/dk-open/go-mmr)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/dk-open/go-mmr)](https://github.com/dk-open/go-mmr)
+[![GitHub release](https://img.shields.io/github/release/dk-open/go-mmr.svg)](https://github.com/dk-open/go-mmr/releases)
+[![GitHub issues](https://img.shields.io/github/issues/dk-open/go-mmr)](https://github.com/dk-open/go-mmr/issues)
 
 ## Introduction
 
