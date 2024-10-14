@@ -51,7 +51,7 @@ func TestMmrProof(t *testing.T) {
 			t.Fatalf("failed to add hash %v at index %d: %v", h, i, err)
 		}
 	}
-	p, err := m.CreateProof(ctx, 0)
+	p, err := m.CreateProof(ctx, 3)
 	if err != nil {
 		t.Fatalf("failed to create proof: %v", err)
 	}
