@@ -41,6 +41,17 @@ func (a *memoryIndexSource[K, V]) Get(ctx context.Context, isLeaf bool, index K)
 	return res, nil
 }
 
+func (a *memoryIndexSource[K, V]) LeafIndex(ctx context.Context, leaf V) (res K, err error) {
+	a.RLock()
+	defer a.RUnlock()
+	for k, v := range a.leafs {
+		if v == leaf {
+			return k, nil
+		}
+	}
+	return res, types.ErrKeyNotFound
+}
+
 func MemoryIndexSource[K index.Value, V types.HashType]() IIndexSource[K, V] {
 	return &memoryIndexSource[K, V]{
 		leafs: make(map[K]V),

@@ -49,7 +49,6 @@ func (l *leafIndex[TI]) GetSibling() Index[TI] {
 
 // RightUp moves the current node to its parent if it's a right child in the tree hierarchy.
 func (l *leafIndex[TI]) RightUp() Index[TI] {
-	//	value := x.Index()
 	if l.IsRight() {
 		return NodeIndex(l.value)
 	}

@@ -16,16 +16,22 @@ func main() {
 	ctx := context.Background()
 	memoryIndexes := store.MemoryIndexSource[uint64, types.Hash256]()
 	m := merkle.NewMountainRange[uint64, types.Hash256](hasher.Sha3_256, memoryIndexes)
-
+	var transactions []types.Hash256
 	for i := 0; i < 10; i++ {
 		h := hasher.Sha3_256([]byte(fmt.Sprintf("test data %d", i)))
+		transactions = append(transactions, h)
 		fmt.Printf("Adding at %d item %x\n", i, h)
-		if err := m.Add(ctx, h); err != nil {
-			log.Fatal(err)
-		}
+
+	}
+	if err := m.Add(ctx, transactions...); err != nil {
+		log.Fatal(err)
 	}
 	fmt.Println()
-	root := m.Root()
+	root, err := m.Root(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Printf("Root: %x\n", root)
 	item3, err := m.Get(ctx, 3)
 	if err != nil {
@@ -33,7 +39,7 @@ func main() {
 	}
 	fmt.Printf("Item at index 3: %x\n", item3)
 	fmt.Println("Create a proof for item 4")
-	prooft, err := m.CreateProof(ctx, 4)
+	prooft, err := m.ProofByIndex(ctx, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,5 +49,5 @@ func main() {
 		log.Fatal("Proof is not invalid")
 	}
 
-	fmt.Println("Proof is valid")
+	fmt.Println("Proof is Valid")
 }

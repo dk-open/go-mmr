@@ -88,7 +88,6 @@ func TestBufferWrite(t *testing.T) {
 			err = types.BufferWrite[types.Hash128](&buf, test.input.(types.Hash128))
 		case types.Hash160:
 			err = types.BufferWrite[types.Hash160](&buf, test.input.(types.Hash160))
-
 		case types.Hash224:
 			err = types.BufferWrite[types.Hash224](&buf, test.input.(types.Hash224))
 		case types.Hash256:
@@ -158,9 +157,9 @@ func TestBufferRead(t *testing.T) {
 		case int64:
 			result, err = types.BufferRead[int64](buf)
 		case int:
-			result, err = types.BufferRead[int](buf) // Assuming 32-bit int
+			result, err = types.BufferRead[int](buf)
 		case uint:
-			result, err = types.BufferRead[uint](buf) // Assuming 32-bit uint
+			result, err = types.BufferRead[uint](buf)
 		case string:
 			result, err = types.BufferRead[string](buf)
 		default:

@@ -63,20 +63,6 @@ func (m *mmr[TIndex, THash]) appendMerkle(ctx context.Context, value THash) (err
 		return err
 	}
 
-	peaks := index.GetPeaks(leafIndex)
-	hashes := make([][]byte, len(peaks))
-	for i, p := range peaks {
-		h, hErr := m.indexes.Get(ctx, p.IsLeaf(), p.Index())
-		if hErr != nil {
-			return hErr
-		}
-		data, hErr := types.HashBytes[THash](h)
-		if hErr != nil {
-			return hErr
-		}
-		hashes[i] = data
-	}
-	m.root = m.hf(hashes...)
 	m.size = m.size + 1
 	return nil
 }
